@@ -20,6 +20,9 @@
         window.mermaid = mermaid;
     </script>
 
+    <!-- html2pdf CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <style>
         :root {
             --bg-primary: #0b0f19;
@@ -103,8 +106,12 @@
             <h1>LawnMowerBot (Robot Cortacésped)</h1>
             <p>Panel Interactivo Dinámico • Auto-Renumerado y Enlazado Inteligente</p>
         </div>
-        <div class="project-badge">Editor Activo</div>
-        <button class="btn btn-secondary" onclick="resetStorage()" style="font-size: 0.8rem; border-color: var(--accent-critical); color: var(--accent-critical);">⚠️ Resetear Datos</button>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end;">
+            <button class="btn btn-secondary" onclick="importJSON()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">📂 Cargar .json</button>
+            <button class="btn btn-secondary" onclick="exportJSON()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">💾 Guardar .json</button>
+            <button class="btn btn-primary" onclick="exportPDF()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">📄 Exportar PDF</button>
+            <button class="btn btn-secondary" onclick="resetStorage()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; border-color: var(--accent-critical); color: var(--accent-critical);" title="Volver a los datos de fábrica">⚠️ Reset</button>
+        </div>
     </header>
 
     <main>
@@ -253,24 +260,9 @@
 
     <script>
         let tasksData = [
-            { id: "T1.1", phase: "Fase 1: Hardware", name: "Diseño/Selección de Chasis y Motores", duration: 5, predecessors: [] },
-            { id: "T1.2", phase: "Fase 1: Hardware", name: "Selección/Adquisición de Sensores y SBC", duration: 7, predecessors: [] },
-            { id: "T1.3", phase: "Fase 1: Hardware", name: "Diseño de Sistema de Potencia", duration: 4, predecessors: ["T1.1"] },
-            { id: "T1.4", phase: "Fase 1: Hardware", name: "Ensamblado Mecánico y Cableado", duration: 6, predecessors: ["T1.2", "T1.3"] },
-            { id: "T2.1", phase: "Fase 2: Bajo Nivel", name: "Firmware de Motores (PID/Encoders)", duration: 5, predecessors: ["T1.4"] },
-            { id: "T2.2", phase: "Fase 2: Bajo Nivel", name: "Protocolo de Comunicación SBC-MCU", duration: 4, predecessors: ["T2.1"] },
-            { id: "T2.3", phase: "Fase 2: Bajo Nivel", name: "Teleoperación y Grabación de Rutas", duration: 3, predecessors: ["T2.2"] },
-            { id: "T3.1", phase: "Fase 3: ROS 2 / SLAM", name: "Configuración de SO y ROS2 en SBC", duration: 2, predecessors: ["T1.2"] },
-            { id: "T3.2", phase: "Fase 3: ROS 2 / SLAM", name: "Integración LiDAR 2D en ROS2", duration: 3, predecessors: ["T3.1"] },
-            { id: "T3.3", phase: "Fase 3: ROS 2 / SLAM", name: "Odometría y Mapeo SLAM", duration: 6, predecessors: ["T3.2", "T2.2"] },
-            { id: "T3.4", phase: "Fase 3: ROS 2 / SLAM", name: "Navegación y Reproducción de Rutas (Nav2)", duration: 8, predecessors: ["T3.3", "T2.3"] },
-            { id: "T4.1", phase: "Fase 4: Visión (RGB)", name: "Driver de Cámara RGB y OpenCV", duration: 2, predecessors: ["T3.1"] },
-            { id: "T4.2", phase: "Fase 4: Visión (RGB)", name: "Integración de Modelo de Detección de IA", duration: 7, predecessors: ["T4.1"] },
-            { id: "T4.3", phase: "Fase 4: Visión (RGB)", name: "Nodo de E-Stop/Evitación de Obstáculos", duration: 5, predecessors: ["T4.2", "T3.4"] },
-            { id: "T5.1", phase: "Fase 5: Integración", name: "Integración de Software (Launch Files)", duration: 4, predecessors: ["T4.3"] },
-            { id: "T5.2", phase: "Fase 5: Integración", name: "Pruebas Controladas (Seco/Simulación)", duration: 4, predecessors: ["T5.1"] },
-            { id: "T5.3", phase: "Fase 5: Integración", name: "Pruebas de Campo (Corte Real)", duration: 5, predecessors: ["T5.2"] },
-            { id: "T5.4", phase: "Fase 5: Integración", name: "Documentación y Ajustes Finales", duration: 3, predecessors: ["T5.3"] }
+            { id: "T1.1", phase: "Fase 1: Diseño", name: "Diseño del Chasis", duration: 5, predecessors: [] },
+            { id: "T1.2", phase: "Fase 1: Diseño", name: "Selección de Componentes", duration: 3, predecessors: ["T1.1"] },
+            { id: "T2.1", phase: "Fase 2: Ensamblaje", name: "Armado Final", duration: 4, predecessors: ["T1.2"] }
         ];
 
         // Dynamic Content Blocks Logic
@@ -307,6 +299,90 @@
                 localStorage.removeItem('lawnMowerBlocks');
                 location.reload();
             }
+        }
+
+        function exportJSON() {
+            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({tasks: tasksData, blocks: contentBlocks}, null, 2));
+            let downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "LawnMowerBot_Data.json");
+            document.body.appendChild(downloadAnchorNode); 
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        function importJSON() {
+            let input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            input.onchange = e => {
+                let file = e.target.files[0];
+                if(!file) return;
+                let reader = new FileReader();
+                reader.readAsText(file,'UTF-8');
+                reader.onload = readerEvent => {
+                    try {
+                        let parsed = JSON.parse(readerEvent.target.result);
+                        if (parsed.tasks && parsed.blocks) {
+                            tasksData = parsed.tasks;
+                            contentBlocks = parsed.blocks;
+                            saveToStorage();
+                            updateAll();
+                            alert('Proyecto cargado correctamente. Ya puedes continuar editando.');
+                        } else {
+                            alert('Archivo JSON no válido o corrupto.');
+                        }
+                    } catch (err) {
+                        alert('Error al leer el archivo JSON.');
+                    }
+                }
+            }
+            input.click();
+        }
+
+        async function exportPDF() {
+            if (!window.html2pdf) {
+                alert("La librería de PDF todavía se está cargando. Intenta en un segundo.");
+                return;
+            }
+            
+            let btn = document.querySelector('.btn-primary[onclick="exportPDF()"]');
+            let originalText = btn.innerText;
+            btn.innerText = "⏳ Generando PDF...";
+            
+            // Forzar que todas las pestañas estén visibles para el PDF
+            let tabs = document.getElementsByClassName("tab-content");
+            let originalStates = [];
+            
+            for (let i = 0; i < tabs.length; i++) {
+                originalStates.push(tabs[i].classList.contains("active"));
+                tabs[i].classList.add("active");
+                tabs[i].style.display = "block";
+            }
+            
+            // Asegurarnos de que los gráficos SVG se hayan generado aunque estuvieran ocultos
+            await triggerMermaidRender('grafo');
+            await triggerMermaidRender('gantt');
+
+            const element = document.querySelector('main');
+            const opt = {
+                margin:       [15, 10, 15, 10], // Margen en mm [top, left, bottom, right]
+                filename:     'LawnMowerBot_Proyecto_Unificado.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#0b0f19', windowWidth: 1200 },
+                jsPDF:        { unit: 'mm', format: 'a3', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restaurar las pestañas a su estado oculto
+                for (let i = 0; i < tabs.length; i++) {
+                    if (!originalStates[i]) {
+                        tabs[i].classList.remove("active");
+                        tabs[i].style.display = ""; 
+                    }
+                }
+                btn.innerText = originalText;
+            });
         }
 
         let computedTasks = {};
@@ -508,16 +584,21 @@
             if (!window.mermaid) return;
             try {
                 if (tabName === 'grafo') {
-                    const { svg } = await window.mermaid.render('grafo-svg', currentGraphStr);
+                    const uniqueId = 'grafo-svg-' + Date.now();
+                    const { svg } = await window.mermaid.render(uniqueId, currentGraphStr);
                     document.getElementById('grafo-container').innerHTML = svg;
                 } else if (tabName === 'gantt') {
+                    const uniqueId = 'gantt-svg-' + Date.now();
                     const fullGantt = `%%{init: { 'gantt': { 'tickInterval': '1d' } } }%%\n` + currentGanttStr;
-                    const { svg } = await window.mermaid.render('gantt-svg', fullGantt);
+                    const { svg } = await window.mermaid.render(uniqueId, fullGantt);
                     document.getElementById('gantt-container').innerHTML = svg;
                     document.getElementById('project-marker').style.display = 'block';
                 }
             } catch (err) {
-                console.error(err);
+                console.error("Mermaid Render Error:", err);
+                if (tabName === 'grafo') {
+                    document.getElementById('grafo-container').innerHTML = "<p style='color: #fca5a5;'>Error al generar el grafo. Revisa que no haya caracteres extraños en los nombres de tareas.</p>";
+                }
             }
         }
 
