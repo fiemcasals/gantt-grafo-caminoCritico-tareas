@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LawnMowerBot - Panel de Control Interactivo</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Mermaid CDN -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'dark',
+            securityLevel: 'loose'
+        });
+        window.mermaid = mermaid;
+    </script>
+
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #131a2c;
+            --bg-card: rgba(30, 41, 59, 0.4);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-primary: #38bdf8;
+            --accent-critical: #f43f5e;
+            --font-main: 'Inter', sans-serif;
+            --font-title: 'Outfit', sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-primary); color: var(--text-primary); font-family: var(--font-main); min-height: 100vh; padding: 2rem; background-image: radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.05) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(244, 63, 94, 0.05) 0px, transparent 50%); }
+        header { max-width: 1200px; margin: 0 auto 2rem auto; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+        .header-title h1 { font-family: var(--font-title); font-size: 2.2rem; background: linear-gradient(135deg, var(--text-primary) 30%, var(--accent-primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-title p { color: var(--text-secondary); margin-top: 0.2rem; }
+        .project-badge { background: rgba(56, 189, 248, 0.15); border: 1px solid var(--accent-primary); color: var(--accent-primary); padding: 0.4rem 1rem; border-radius: 50px; font-weight: 600; font-size: 0.85rem; }
+        main { max-width: 1200px; margin: 0 auto; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; backdrop-filter: blur(10px); }
+        .stat-card.critical { border-left: 4px solid var(--accent-critical); }
+        .stat-card.active { border-left: 4px solid var(--accent-primary); }
+        .stat-label { color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; }
+        .stat-value { font-family: var(--font-title); font-size: 2rem; font-weight: 700; margin: 0.5rem 0; }
+        .stat-desc { color: var(--text-secondary); font-size: 0.8rem; }
+        
+        .tabs-container { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .tabs-header { display: flex; border-bottom: 1px solid var(--border-color); background: rgba(15, 23, 42, 0.6); overflow-x: auto; }
+        .tab-btn { background: none; border: none; color: var(--text-secondary); padding: 1.2rem 2rem; font-size: 0.95rem; font-weight: 600; cursor: pointer; white-space: nowrap; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: var(--accent-primary); border-bottom-color: var(--accent-primary); background: rgba(56, 189, 248, 0.04); }
+        .tab-content { padding: 2rem; display: none; }
+        .tab-content.active { display: block; }
+        
+        .diagram-box { background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; overflow-x: auto; margin-top: 1rem; display: flex; justify-content: center; }
+        .diagram-box > div { width: 100%; min-width: 800px; text-align: center; }
+        h2 { font-family: var(--font-title); font-size: 1.5rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;}
+        p { color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.6;}
+        
+        .table-responsive { overflow-x: auto; overflow-y: visible; margin-top: 1rem; border-radius: 8px; border: 1px solid var(--border-color); min-height: 250px; padding-bottom: 80px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: left; }
+        th { background: rgba(15, 23, 42, 0.8); padding: 1rem; border-bottom: 2px solid var(--border-color); }
+        td { padding: 1rem; border-bottom: 1px solid var(--border-color); }
+        tr:hover td { background: rgba(255, 255, 255, 0.03); }
+        .tr-critical td { color: #fca5a5; }
+        .badge-crit { background: rgba(244, 63, 94, 0.15); border: 1px solid var(--accent-critical); color: var(--accent-critical); padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+        .badge-normal { background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.3); color: var(--text-secondary); padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; }
+        
+        .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; font-family: var(--font-main); }
+        .btn:hover { opacity: 0.9; }
+        .btn-primary { background: var(--accent-primary); color: #000; }
+        .btn-secondary { background: transparent; border: 1px solid var(--text-secondary); color: var(--text-primary); }
+        .action-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; margin: 0 0.3rem; transition: transform 0.1s; }
+        .action-btn:hover { transform: scale(1.2); }
+        
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--bg-secondary); padding: 2rem; border: 1px solid var(--border-color); border-radius: 12px; width: 450px; max-width: 90%; }
+        .modal-content h3 { margin-bottom: 1.5rem; font-family: var(--font-title); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; color: var(--text-secondary); }
+        .form-group input { width: 100%; padding: 0.6rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: white; border-radius: 4px; font-family: var(--font-main); }
+        .form-group input:focus { outline: none; border-color: var(--accent-primary); }
+        .form-group input:disabled { opacity: 0.5; cursor: not-allowed; }
+        .modal-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; }
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { display: none; position: absolute; right: 0; top: 100%; background-color: #1e293b; min-width: 170px; box-shadow: 0 4px 12px rgba(0,0,0,0.6); border: 1px solid var(--border-color); border-radius: 6px; z-index: 100; overflow: hidden; }
+        .dropdown-content .dropdown-item { color: var(--text-primary); padding: 12px 16px; text-decoration: none; display: block; font-size: 0.85rem; transition: background 0.2s; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+        .dropdown-content .dropdown-item:last-child { border-bottom: none; }
+        .dropdown-content .dropdown-item:hover { background-color: rgba(255, 255, 255, 0.05); }
+        .show-dropdown { display: block; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1>LawnMowerBot (Robot Cortacésped)</h1>
+            <p>Panel Interactivo Dinámico • Auto-Renumerado y Enlazado Inteligente</p>
+        </div>
+        <div class="project-badge">Editor Activo</div>
+    </header>
+
+    <main>
+        <div class="stats-grid">
+            <div class="stat-card active">
+                <span class="stat-label">Duración Total</span>
+                <span class="stat-value" id="stat-duration">-- Días</span>
+                <span class="stat-desc">Estimación óptima (CPM)</span>
+            </div>
+            <div class="stat-card critical">
+                <span class="stat-label">Camino Crítico</span>
+                <span class="stat-value" id="stat-critical">-- Tareas</span>
+                <span class="stat-desc">Sin holgura (Slack = 0)</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">IDs y Dependencias</span>
+                <span class="stat-value" style="font-size: 1.5rem; color: var(--accent-success);">Auto-Gestionado</span>
+                <span class="stat-desc">Inserción Inteligente (Como Anterior)</span>
+            </div>
+        </div>
+
+        <div class="tabs-container">
+            <div class="tabs-header">
+                <button class="tab-btn" onclick="openTab(event, 'resumen')">Resumen del Proyecto</button>
+                <button class="tab-btn active" onclick="openTab(event, 'cpm-table')">Cronograma Interactivo (CPM)</button>
+                <button class="tab-btn" onclick="openTab(event, 'grafo')">Grafo Dinámico</button>
+                <button class="tab-btn" onclick="openTab(event, 'gantt')">Gantt Dinámico</button>
+                <button class="tab-btn" onclick="openTab(event, 'cuellos')">Análisis de Riesgos</button>
+            </div>
+
+            <div id="resumen" class="tab-content">
+                <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>📖 Documentación y Resumen del Proyecto</span>
+                    <button class="btn btn-primary" onclick="addBlock('resumen')" style="font-size: 0.9rem; padding: 0.5rem 1rem;">➕ Nuevo Bloque</button>
+                </h2>
+                <div id="resumen-blocks-container" style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem;"></div>
+            </div>
+
+            <div id="cpm-table" class="tab-content active">
+                <h2>
+                    <span>📈 Tabla de Control y Edición (CPM)</span>
+                    <button class="btn btn-primary" onclick="openModal('add')">➕ Nueva Tarea al Final</button>
+                </h2>
+                
+                <div style="margin-bottom: 1.5rem; background: rgba(30, 41, 59, 0.3); border: 1px solid var(--border-color); padding: 1rem; border-radius: 8px; font-size: 0.9rem;">
+                    <p style="margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Leyenda de Acrónimos (Significado de las siglas en inglés):</p>
+                    <ul style="list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.8rem; color: var(--text-secondary); padding-left: 0; margin-bottom: 0;">
+                        <li><strong>ES</strong> (<em>Early Start</em>) &rarr; Inicio más Temprano</li>
+                        <li><strong>EF</strong> (<em>Early Finish</em>) &rarr; Fin más Temprano</li>
+                        <li><strong>LS</strong> (<em>Late Start</em>) &rarr; Inicio más Tardío</li>
+                        <li><strong>LF</strong> (<em>Late Finish</em>) &rarr; Fin más Tardío</li>
+                    </ul>
+                </div>
+                
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cód.</th>
+                                <th>Tarea</th>
+                                <th>Fase</th>
+                                <th>Duración</th>
+                                <th>Predecesoras</th>
+                                <th>ES</th>
+                                <th>EF</th>
+                                <th>LS</th>
+                                <th>LF</th>
+                                <th>Holgura</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cpm-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="grafo" class="tab-content">
+                <h2>📊 Grafo de Tareas Dinámico</h2>
+                <div class="diagram-box"><div id="grafo-container">Cargando grafo...</div></div>
+            </div>
+
+            <div id="gantt" class="tab-content">
+                <h2>
+                    <span>📅 Diagrama de Gantt Dinámico</span>
+                    <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary); background: rgba(244,63,94,0.15); padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid var(--accent-critical);">* Arrastra la línea roja para marcar tu progreso actual</span>
+                </h2>
+                <div class="diagram-box" style="position: relative;">
+                    <div id="gantt-wrapper" style="position: relative; display: inline-block; min-width: 100%;">
+                        <div id="gantt-container">Cargando Gantt...</div>
+                        <div id="project-marker" style="position: absolute; top: 0; bottom: 0; width: 3px; background-color: #f43f5e; box-shadow: 0 0 10px rgba(244,63,94,0.8); cursor: ew-resize; left: 15%; z-index: 10; display: none;">
+                            <div id="project-marker-label" style="position: absolute; top: 15px; transform: translateX(-50%); background: #f43f5e; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; white-space: nowrap; user-select: none; pointer-events: none;">📍 Progreso Actual</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cuellos" class="tab-content">
+                <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>🔍 Estudio de Cuellos de Botella y Riesgos</span>
+                    <button class="btn btn-primary" onclick="addBlock('cuellos')" style="font-size: 0.9rem; padding: 0.5rem 1rem;">➕ Nuevo Riesgo</button>
+                </h2>
+                <div id="cuellos-blocks-container" style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem;"></div>
+            </div>
+        </div>
+    </main>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">✏️ Editar Tarea</h3>
+            
+            <div class="form-group">
+                <label>Nombre de la Tarea</label>
+                <input type="text" id="taskName">
+            </div>
+            
+            <div class="form-group">
+                <label>Duración (en Días)</label>
+                <input type="number" id="taskDuration" min="1">
+            </div>
+            
+            <div class="form-group">
+                <label>Fase a la que pertenece</label>
+                <input type="text" id="taskPhase" placeholder="Ej. Fase 1: Hardware">
+            </div>
+            
+            <div class="form-group" id="autoLinkGroup" style="display: none; background: rgba(56, 189, 248, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid var(--accent-primary); margin-bottom: 1rem;">
+                <label style="display: flex; align-items: center; cursor: pointer; color: var(--text-primary); margin-bottom: 0;">
+                    <input type="checkbox" id="autoLinkCheck" style="width: auto; margin-right: 0.8rem; transform: scale(1.2);">
+                    Enlazar Automáticamente (Como Anterior)
+                </label>
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem; margin-bottom: 0;">Si está activo, esta nueva tarea heredará las predecesoras de la tarea que vas a desplazar, y la desplazada pasará a depender de esta nueva.</p>
+            </div>
+
+            <div class="form-group" id="predsGroup">
+                <label>Predecesoras (Separadas por comas)</label>
+                <input type="text" id="taskPreds" placeholder="Ej. T1.1, T1.2">
+            </div>
+            
+            <div class="modal-actions">
+                <button onclick="closeModal()" class="btn btn-secondary">Cancelar</button>
+                <button onclick="saveTask()" class="btn btn-primary">Guardar</button>
+            </div>
+        </div>
+
+
+    <script>
+        let tasksData = [
+            { id: "T1.1", phase: "Fase 1: Hardware", name: "Diseño/Selección de Chasis y Motores", duration: 5, predecessors: [] },
+            { id: "T1.2", phase: "Fase 1: Hardware", name: "Selección/Adquisición de Sensores y SBC", duration: 7, predecessors: [] },
+            { id: "T1.3", phase: "Fase 1: Hardware", name: "Diseño de Sistema de Potencia", duration: 4, predecessors: ["T1.1"] },
+            { id: "T1.4", phase: "Fase 1: Hardware", name: "Ensamblado Mecánico y Cableado", duration: 6, predecessors: ["T1.2", "T1.3"] },
+            { id: "T2.1", phase: "Fase 2: Bajo Nivel", name: "Firmware de Motores (PID/Encoders)", duration: 5, predecessors: ["T1.4"] },
+            { id: "T2.2", phase: "Fase 2: Bajo Nivel", name: "Protocolo de Comunicación SBC-MCU", duration: 4, predecessors: ["T2.1"] },
+            { id: "T2.3", phase: "Fase 2: Bajo Nivel", name: "Teleoperación y Grabación de Rutas", duration: 3, predecessors: ["T2.2"] },
+            { id: "T3.1", phase: "Fase 3: ROS 2 / SLAM", name: "Configuración de SO y ROS2 en SBC", duration: 2, predecessors: ["T1.2"] },
+            { id: "T3.2", phase: "Fase 3: ROS 2 / SLAM", name: "Integración LiDAR 2D en ROS2", duration: 3, predecessors: ["T3.1"] },
+            { id: "T3.3", phase: "Fase 3: ROS 2 / SLAM", name: "Odometría y Mapeo SLAM", duration: 6, predecessors: ["T3.2", "T2.2"] },
+            { id: "T3.4", phase: "Fase 3: ROS 2 / SLAM", name: "Navegación y Reproducción de Rutas (Nav2)", duration: 8, predecessors: ["T3.3", "T2.3"] },
+            { id: "T4.1", phase: "Fase 4: Visión (RGB)", name: "Driver de Cámara RGB y OpenCV", duration: 2, predecessors: ["T3.1"] },
+            { id: "T4.2", phase: "Fase 4: Visión (RGB)", name: "Integración de Modelo de Detección de IA", duration: 7, predecessors: ["T4.1"] },
+            { id: "T4.3", phase: "Fase 4: Visión (RGB)", name: "Nodo de E-Stop/Evitación de Obstáculos", duration: 5, predecessors: ["T4.2", "T3.4"] },
+            { id: "T5.1", phase: "Fase 5: Integración", name: "Integración de Software (Launch Files)", duration: 4, predecessors: ["T4.3"] },
+            { id: "T5.2", phase: "Fase 5: Integración", name: "Pruebas Controladas (Seco/Simulación)", duration: 4, predecessors: ["T5.1"] },
+            { id: "T5.3", phase: "Fase 5: Integración", name: "Pruebas de Campo (Corte Real)", duration: 5, predecessors: ["T5.2"] },
+            { id: "T5.4", phase: "Fase 5: Integración", name: "Documentación y Ajustes Finales", duration: 3, predecessors: ["T5.3"] }
+        ];
+
+        let computedTasks = {};
+        let projectDuration = 0;
+        let currentGraphStr = "";
+        let currentGanttStr = "";
+        let modalMode = 'add';
+        let activeTaskId = null;
+        let activeTaskIndex = -1;
+
+        function autoRenumberTasks() {
+            let phaseCounters = {};
+            let phaseIndex = 1;
+            let oldToNewIdMap = {};
+
+            // 1. Assign sequential IDs based on current order and Phase
+            tasksData.forEach(t => {
+                if (!phaseCounters[t.phase]) {
+                    let match = t.phase.match(/Fase (\d+)/i);
+                    let pNum = match ? parseInt(match[1]) : phaseIndex++;
+                    phaseCounters[t.phase] = { num: pNum, count: 1 };
+                }
+                
+                let newId = "T" + phaseCounters[t.phase].num + "." + phaseCounters[t.phase].count;
+                phaseCounters[t.phase].count++;
+                
+                oldToNewIdMap[t.id.toUpperCase()] = newId;
+                t.temp_new_id = newId;
+            });
+
+            // 2. Remap predecessors using the oldToNew map
+            tasksData.forEach(t => {
+                t.id = t.temp_new_id;
+                delete t.temp_new_id;
+                
+                t.predecessors = t.predecessors
+                    .map(oldP => oldP.toUpperCase())
+                    .map(oldP => oldToNewIdMap[oldP] || oldP)
+                    .filter(p => tasksData.some(x => x.id === p)); // Ensure validity
+                    
+                t.predecessors = [...new Set(t.predecessors)]; // Deduplicate
+            });
+        }
+
+        function recalculateCPM() {
+            computedTasks = {};
+            tasksData.forEach(t => {
+                computedTasks[t.id] = { ...t, es: 0, ef: 0, ls: 0, lf: 0, slack: 0, successors: [], isCritical: false };
+            });
+
+            Object.values(computedTasks).forEach(t => {
+                t.predecessors.forEach(pId => {
+                    if (computedTasks[pId]) computedTasks[pId].successors.push(t.id);
+                });
+            });
+
+            let visited = {};
+            function forward(id) {
+                if (visited[id]) return computedTasks[id].ef;
+                let t = computedTasks[id];
+                if (!t.predecessors.length) {
+                    t.es = 0;
+                    t.ef = t.duration;
+                } else {
+                    let maxEf = 0;
+                    t.predecessors.forEach(pId => {
+                        if (computedTasks[pId]) maxEf = Math.max(maxEf, forward(pId));
+                    });
+                    t.es = maxEf;
+                    t.ef = t.es + t.duration;
+                }
+                visited[id] = true;
+                return t.ef;
+            }
+            Object.keys(computedTasks).forEach(forward);
+
+            projectDuration = Math.max(0, ...Object.values(computedTasks).map(t => t.ef));
+
+            let visitedBack = {};
+            function backward(id) {
+                if (visitedBack[id]) return computedTasks[id].ls;
+                let t = computedTasks[id];
+                if (!t.successors.length) {
+                    t.lf = projectDuration;
+                    t.ls = t.lf - t.duration;
+                } else {
+                    let minLs = Infinity;
+                    t.successors.forEach(sId => {
+                        if (computedTasks[sId]) minLs = Math.min(minLs, backward(sId));
+                    });
+                    t.lf = minLs;
+                    t.ls = t.lf - t.duration;
+                }
+                t.slack = t.lf - t.ef;
+                t.isCritical = t.slack === 0;
+                visitedBack[id] = true;
+                return t.ls;
+            }
+            Object.keys(computedTasks).forEach(backward);
+            
+            document.getElementById('stat-duration').innerText = projectDuration + " Días";
+            let critCount = Object.values(computedTasks).filter(t => t.isCritical).length;
+            document.getElementById('stat-critical').innerText = critCount + " Tareas";
+        }
+
+        function renderTable() {
+            let tbody = document.getElementById('cpm-tbody');
+            tbody.innerHTML = '';
+            
+            tasksData.forEach(t => {
+                let calc = computedTasks[t.id];
+                let tr = document.createElement('tr');
+                if (calc.isCritical) tr.classList.add('tr-critical');
+                
+                let predStr = t.predecessors.length > 0 ? t.predecessors.join(', ') : '-';
+                let critBadge = calc.isCritical ? '<span class="badge-crit">CRÍTICA</span>' : '<span class="badge-normal">Holgura</span>';
+                
+                tr.innerHTML = `
+                    <td><strong>${t.id}</strong></td>
+                    <td>${t.name}</td>
+                    <td><span style="font-size: 0.75rem; color: var(--text-primary); border: 1px solid var(--accent-primary); padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.1); white-space: nowrap;">${t.phase}</span></td>
+                    <td>${t.duration} d</td>
+                    <td>${predStr}</td>
+                    <td>${calc.es}</td>
+                    <td>${calc.ef}</td>
+                    <td>${calc.ls}</td>
+                    <td>${calc.lf}</td>
+                    <td>${calc.isCritical ? '<strong>0</strong>' : calc.slack + ' d'}</td>
+                    <td>${critBadge}</td>
+                    <td style="white-space: nowrap; overflow: visible;">
+                        <div class="dropdown">
+                            <button class="action-btn" onclick="toggleDropdown(this)" title="Opciones">⚙️</button>
+                            <div class="dropdown-content">
+                                <div class="dropdown-item" onclick="openModal('insert', '${t.id}')">⬆️ Insertar Antes</div>
+                                <div class="dropdown-item" onclick="openModal('edit', '${t.id}')">✏️ Editar Tarea</div>
+                                <div class="dropdown-item" onclick="deleteTask('${t.id}')" style="color: #fca5a5;">🗑️ Eliminar Tarea</div>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function generateMermaidStrings() {
+            let graphStr = `graph TD\nclassDef critical fill:#fca5a5,stroke:#f43f5e,stroke-width:2.5px,color:#7f1d1d;\nclassDef normal fill:#e0f2fe,stroke:#0ea5e9,stroke-width:1.5px,color:#0c4a6e;\n`;
+            tasksData.forEach(t => {
+                let calc = computedTasks[t.id];
+                let cls = calc && calc.isCritical ? 'critical' : 'normal';
+                let safeId = t.id.replace(/\./g, '_');
+                let label = `<b>${t.id}: ${t.name} (${t.duration}d)</b><br/>ES: ${calc.es} | EF: ${calc.ef}<br/>LS: ${calc.ls} | LF: ${calc.lf}<br/>Holgura: ${calc.slack}d`;
+                graphStr += `    ${safeId}["${label}"]:::${cls}\n`;
+            });
+            let linkIdx = 0, critLinks = [];
+            tasksData.forEach(t => {
+                t.predecessors.forEach(pId => {
+                    if (!computedTasks[pId]) return;
+                    let safeT = t.id.replace(/\./g, '_');
+                    let safeP = pId.replace(/\./g, '_');
+                    graphStr += `    ${safeP} --> ${safeT}\n`;
+                    let tCalc = computedTasks[t.id], pCalc = computedTasks[pId];
+                    if (tCalc.isCritical && pCalc.isCritical && pCalc.ef === tCalc.es) critLinks.push(linkIdx);
+                    linkIdx++;
+                });
+            });
+            if (critLinks.length > 0) graphStr += `    linkStyle ${critLinks.join(',')} stroke:#f43f5e,stroke-width:3px;\n`;
+            currentGraphStr = graphStr;
+
+            let ganttStr = `gantt\n    title Cronograma de Trabajo LawnMowerBot\n    dateFormat YYYY-MM-DD\n    axisFormat %d-%b\n`;
+            let phases = {};
+            tasksData.forEach(t => {
+                if (!phases[t.phase]) phases[t.phase] = [];
+                phases[t.phase].push(t);
+            });
+            
+            let startD = new Date('2026-06-03T00:00:00');
+            Object.keys(phases).forEach(ph => {
+                ganttStr += `    section ${ph}\n`;
+                phases[ph].forEach(t => {
+                    let calc = computedTasks[t.id];
+                    let safeId = t.id.toLowerCase().replace(/\./g, '_');
+                    let deps = t.predecessors.map(p => p.toLowerCase().replace(/\./g, '_'));
+                    let depStr = deps.length > 0 ? `after ${deps.join(' ')}` : `2026-06-03`;
+                    if (t.predecessors.length === 0) depStr = `2026-06-03`;
+                    
+                    let esDate = new Date(startD.getTime() + calc.es * 86400000);
+                    let efDate = new Date(startD.getTime() + calc.ef * 86400000);
+                    let fmt = d => String(d.getDate()).padStart(2,'0') + '-' + ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()];
+                    
+                    let label = `${t.id} - ${t.name} (Días ${calc.es+1}-${calc.ef} / ${fmt(esDate)} al ${fmt(efDate)})`;
+                    let critMod = calc.isCritical ? 'crit,' : '';
+                    ganttStr += `    ${label} :${critMod}${safeId}, ${depStr}, ${t.duration}d\n`;
+                });
+            });
+            currentGanttStr = ganttStr;
+        }
+
+        async function triggerMermaidRender(tabName) {
+            if (!window.mermaid) return;
+            try {
+                if (tabName === 'grafo') {
+                    const { svg } = await window.mermaid.render('grafo-svg', currentGraphStr);
+                    document.getElementById('grafo-container').innerHTML = svg;
+                } else if (tabName === 'gantt') {
+                    const fullGantt = `%%{init: { 'gantt': { 'tickInterval': '1d' } } }%%\n` + currentGanttStr;
+                    const { svg } = await window.mermaid.render('gantt-svg', fullGantt);
+                    document.getElementById('gantt-container').innerHTML = svg;
+                    document.getElementById('project-marker').style.display = 'block';
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function updateAll() {
+            autoRenumberTasks();
+            recalculateCPM();
+            renderTable();
+            generateMermaidStrings();
+            renderBlocks('resumen', 'resumen-blocks-container');
+            renderBlocks('cuellos', 'cuellos-blocks-container');
+            
+            let activeBtn = document.querySelector('.tab-btn.active');
+            if (activeBtn) {
+                let currentTab = activeBtn.getAttribute('onclick').match(/'([^']+)'/)[1];
+                if (currentTab === 'grafo' || currentTab === 'gantt') triggerMermaidRender(currentTab);
+            }
+        }
+
+        function openTab(evt, tabName) {
+            let tabs = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+            
+            let btns = document.getElementsByClassName("tab-btn");
+            for (let i = 0; i < btns.length; i++) btns[i].classList.remove("active");
+            
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+            
+            if (tabName === 'grafo' || tabName === 'gantt') triggerMermaidRender(tabName);
+        }
+
+        function openModal(mode, taskId = null) {
+            modalMode = mode;
+            activeTaskId = taskId;
+            let title = document.getElementById('modalTitle');
+            
+            document.getElementById('taskName').value = "";
+            document.getElementById('taskDuration').value = "1";
+            document.getElementById('taskPhase').value = "Fase Extra";
+            document.getElementById('taskPreds').value = "";
+            document.getElementById('taskPreds').disabled = false;
+            
+            let autoLinkGroup = document.getElementById('autoLinkGroup');
+            
+            if (mode === 'edit') {
+                title.innerText = "✏️ Editar Tarea " + taskId;
+                let t = tasksData.find(x => x.id === taskId);
+                document.getElementById('taskName').value = t.name;
+                document.getElementById('taskDuration').value = t.duration;
+                document.getElementById('taskPhase').value = t.phase;
+                document.getElementById('taskPreds').value = t.predecessors.join(', ');
+                autoLinkGroup.style.display = 'none';
+            } else if (mode === 'insert') {
+                title.innerText = "⬆️ Insertar Antes de " + taskId;
+                let t = tasksData.find(x => x.id === taskId);
+                activeTaskIndex = tasksData.findIndex(x => x.id === taskId);
+                document.getElementById('taskPhase').value = t.phase;
+                autoLinkGroup.style.display = 'block';
+                
+                let checkbox = document.getElementById('autoLinkCheck');
+                checkbox.checked = true;
+                document.getElementById('taskPreds').disabled = true;
+                document.getElementById('taskPreds').value = "Auto-Enlazado";
+            } else {
+                title.innerText = "➕ Nueva Tarea";
+                let lastPhase = tasksData.length > 0 ? tasksData[tasksData.length-1].phase : "Fase 1: Hardware";
+                document.getElementById('taskPhase').value = lastPhase;
+                autoLinkGroup.style.display = 'none';
+            }
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        document.getElementById('autoLinkCheck').addEventListener('change', function(e) {
+            document.getElementById('taskPreds').disabled = e.target.checked;
+            document.getElementById('taskPreds').value = e.target.checked ? "Auto-Enlazado" : "";
+        });
+
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        function saveTask() {
+            let name = document.getElementById('taskName').value.trim();
+            let duration = parseInt(document.getElementById('taskDuration').value);
+            let phase = document.getElementById('taskPhase').value.trim();
+            let predsRaw = document.getElementById('taskPreds').value;
+            let autoLink = document.getElementById('autoLinkCheck').checked;
+            
+            if (!name || isNaN(duration)) {
+                alert("Completa nombre y duración."); return;
+            }
+            
+            if (modalMode === 'edit') {
+                let t = tasksData.find(x => x.id === activeTaskId);
+                if (t) {
+                    t.name = name; t.duration = duration; t.phase = phase;
+                    t.predecessors = predsRaw.split(',').map(s => s.trim()).filter(s => s !== "");
+                }
+            } else if (modalMode === 'insert') {
+                let tempId = "TEMP_" + Date.now();
+                let targetTask = tasksData[activeTaskIndex];
+                let newT = { id: tempId, name, duration, phase, predecessors: [] };
+                
+                if (autoLink) {
+                    newT.predecessors = [...targetTask.predecessors];
+                    targetTask.predecessors = [tempId]; // Target now depends on the inserted task
+                } else {
+                    newT.predecessors = predsRaw.split(',').map(s => s.trim()).filter(s => s !== "");
+                }
+                tasksData.splice(activeTaskIndex, 0, newT);
+            } else {
+                let tempId = "TEMP_" + Date.now();
+                let preds = predsRaw.split(',').map(s => s.trim()).filter(s => s !== "");
+                tasksData.push({ id: tempId, name, duration, phase, predecessors: preds });
+            }
+            
+            closeModal();
+            updateAll();
+        }
+        function deleteTask(taskId) {
+            tasksData = tasksData.filter(t => t.id !== taskId);
+            tasksData.forEach(t => t.predecessors = t.predecessors.filter(p => p !== taskId));
+            updateAll();
+        }
+        function toggleDropdown(btn) {
+            document.querySelectorAll('.dropdown-content.show-dropdown').forEach(el => {
+                if (el !== btn.nextElementSibling) el.classList.remove('show-dropdown');
+            });
+            btn.nextElementSibling.classList.toggle('show-dropdown');
+        }
+
+        document.addEventListener('click', function(event) {
+            if (!event.target.matches('.dropdown .action-btn')) {
+                document.querySelectorAll('.dropdown-content.show-dropdown').forEach(el => {
+                    el.classList.remove('show-dropdown');
+                });
+            }
+        });
+
+        // Marker Draggable Logic
+        let marker = document.getElementById('project-marker');
+        let ganttWrapper = document.getElementById('gantt-wrapper');
+        let isDraggingMarker = false;
+
+        marker.addEventListener('mousedown', (e) => {
+            isDraggingMarker = true;
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDraggingMarker) return;
+            let rect = ganttWrapper.getBoundingClientRect();
+            let x = e.clientX - rect.left;
+            if (x < 0) x = 0;
+            if (x > rect.width) x = rect.width;
+            let percent = (x / rect.width) * 100;
+            marker.style.left = percent + '%';
+            
+            let ticks = document.querySelectorAll('#gantt-svg .tick text');
+            if (ticks.length > 0) {
+                let closestTick = null;
+                let minDiff = Infinity;
+                ticks.forEach(tick => {
+                    let tickRect = tick.getBoundingClientRect();
+                    let tickX = tickRect.left + tickRect.width / 2;
+                    let diff = Math.abs(e.clientX - tickX);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestTick = tick;
+                    }
+                });
+                if (closestTick) {
+                    document.getElementById('project-marker-label').innerText = "📍 " + closestTick.textContent;
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDraggingMarker) {
+                isDraggingMarker = false;
+                document.body.style.userSelect = '';
+            }
+        });
+
+        // Dynamic Content Blocks Logic
+        let contentBlocks = {
+            'resumen': [
+                { id: 'r1', title: '🤖 Cortadora de Pasto Semi-Autónoma (LawnMowerBot)', content: 'Este proyecto consiste en el diseño, desarrollo e implementación de una máquina cortadora de pasto semi-autónoma orientada a la robótica móvil de servicio. La máquina cuenta con la capacidad de aprender un recorrido guiado por el usuario (modo teleoperación) y replicarlo de manera exacta y autónoma. Integra tecnologías modernas de percepción como sensores LiDAR 2D y visión computacional (cámara RGB) para garantizar la seguridad operacional frente a obstáculos dinámicos como humanos y mascotas.', isEditing: false },
+                { id: 'r2', title: '🎯 Objetivos del Proyecto', content: '• Navegación Semi-Autónoma ("Teach-and-Repeat"): Grabar recorridos definidos manualmente y reproducirlos de forma estable.\n• Mapeo y Localización (SLAM): Utilizar un sensor LiDAR 2D para generar mapas bidimensionales del entorno y realizar localización en tiempo real.\n• Detección de Obstáculos Dinámicos y Seguridad: Emplear una cámara RGB y algoritmos de Deep Learning para detectar e identificar personas y animales.\n• Arquitectura Robusta y Segura: Implementar un sistema de parada de emergencia (E-Stop) tanto por hardware como por software.', isEditing: false }
+            ],
+            'cuellos': [
+                { id: 'c1', title: '1. El Abastecimiento de Hardware (T1.2) como "Falso Amigo"', content: 'Análisis: La adquisición de sensores y la SBC tiene una holgura pequeña. Si la importación o compra local se retrasa, esta tarea se convertirá inmediatamente en el nuevo camino crítico, demorando el ensamblado de hardware y el inicio de la configuración de software.\n\nAcción Mitigadora: Realizar la compra de sensores el Día 1 del proyecto, en paralelo al diseño del chasis.', isEditing: false },
+                { id: 'c2', title: '2. El Cuello de Botella de Hardware-Software: Comunicación SBC-MCU (T2.2)', content: 'Análisis: Es el puente crítico entre el hardware físico y ROS 2. Si el protocolo tiene pérdidas de paquetes o ruido eléctrico, bloqueará el desarrollo de la Odometría/SLAM, la cual requiere teleoperar la máquina.\n\nAcción Mitigadora: Utilizar una librería robusta ya probada (ejemplo: micro-ROS sobre serial) en lugar de inventar un protocolo personalizado.', isEditing: false },
+                { id: 'c3', title: '3. La Alta Holgura de la Cámara e IA (T4.1, T4.2)', content: 'Análisis: La puesta a punto del modelo de visión tiene una holgura masiva. Sin embargo, la inferencia visual suele ser un cuello de botella de recursos computacionales (la CPU de la Raspberry Pi puede quedarse corta para procesar frames e inferencias a la vez que corre SLAM y Nav2).\n\nAcción Mitigadora: Empezar probando modelos extremadamente ligeros (YOLOv8-nano cuantizado, o MobileNet-SSD) y medir el uso de CPU/RAM antes de la integración final.', isEditing: false }
+            ]
+        };
+
+        function renderBlocks(category, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+            contentBlocks[category].forEach(b => {
+                let div = document.createElement('div');
+                div.style.background = 'rgba(15, 23, 42, 0.4)';
+                div.style.border = '1px solid var(--border-color)';
+                div.style.borderRadius = '8px';
+                div.style.padding = '1.5rem';
+                
+                if (b.isEditing) {
+                    div.innerHTML = `
+                        <input type="text" id="edit-title-${b.id}" value="${b.title.replace(/"/g, '&quot;')}" style="width: 100%; margin-bottom: 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: white; padding: 0.8rem; font-family: var(--font-title); font-size: 1.1rem; border-radius: 4px;" placeholder="Título del bloque">
+                        <textarea id="edit-content-${b.id}" style="width: 100%; height: 140px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.8rem; font-family: var(--font-main); font-size: 0.95rem; border-radius: 4px; resize: vertical;" placeholder="Desarrollo del texto...">${b.content}</textarea>
+                        <div style="display: flex; gap: 0.8rem; margin-top: 1rem; justify-content: flex-end;">
+                            <button class="btn btn-secondary" onclick="cancelBlock('${category}', '${b.id}')">❌ Cancelar</button>
+                            <button class="btn btn-primary" onclick="saveBlock('${category}', '${b.id}')">💾 Guardar Cambios</button>
+                        </div>
+                    `;
+                } else {
+                    div.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <h3 style="color: var(--text-primary); margin-bottom: 1rem; font-family: var(--font-title);">${b.title}</h3>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="action-btn" onclick="editBlock('${category}', '${b.id}')" title="Editar">✏️</button>
+                                <button class="action-btn" onclick="deleteBlock('${category}', '${b.id}')" title="Eliminar">🗑️</button>
+                            </div>
+                        </div>
+                        <p style="white-space: pre-wrap; margin-bottom: 0; line-height: 1.6; color: var(--text-secondary);">${b.content}</p>
+                    `;
+                }
+                container.appendChild(div);
+            });
+        }
+
+        function addBlock(category) {
+            let newId = 'b_' + Date.now();
+            contentBlocks[category].push({ id: newId, title: '', content: '', isEditing: true });
+            updateAll();
+        }
+        function editBlock(category, id) {
+            contentBlocks[category].find(b => b.id === id).isEditing = true;
+            updateAll();
+        }
+        function cancelBlock(category, id) {
+            let block = contentBlocks[category].find(b => b.id === id);
+            if (block.title === '' && block.content === '') {
+                deleteBlock(category, id);
+            } else {
+                block.isEditing = false;
+                updateAll();
+            }
+        }
+        function saveBlock(category, id) {
+            let block = contentBlocks[category].find(b => b.id === id);
+            block.title = document.getElementById('edit-title-' + id).value;
+            block.content = document.getElementById('edit-content-' + id).value;
+            block.isEditing = false;
+            updateAll();
+        }
+        function deleteBlock(category, id) {
+            contentBlocks[category] = contentBlocks[category].filter(b => b.id !== id);
+            updateAll();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => { updateAll(); });
+    </script>
+</body>
+</html>
