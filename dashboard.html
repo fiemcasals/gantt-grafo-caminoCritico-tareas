@@ -104,6 +104,7 @@
             <p>Panel Interactivo Dinámico • Auto-Renumerado y Enlazado Inteligente</p>
         </div>
         <div class="project-badge">Editor Activo</div>
+        <button class="btn btn-secondary" onclick="resetStorage()" style="font-size: 0.8rem; border-color: var(--accent-critical); color: var(--accent-critical);">⚠️ Resetear Datos</button>
     </header>
 
     <main>
@@ -271,6 +272,42 @@
             { id: "T5.3", phase: "Fase 5: Integración", name: "Pruebas de Campo (Corte Real)", duration: 5, predecessors: ["T5.2"] },
             { id: "T5.4", phase: "Fase 5: Integración", name: "Documentación y Ajustes Finales", duration: 3, predecessors: ["T5.3"] }
         ];
+
+        // Dynamic Content Blocks Logic
+        let defaultContentBlocks = {
+            'resumen': [
+                { id: 'r1', title: '🤖 Cortadora de Pasto Semi-Autónoma (LawnMowerBot)', content: 'Este proyecto consiste en el diseño, desarrollo e implementación de una máquina cortadora de pasto semi-autónoma orientada a la robótica móvil de servicio. La máquina cuenta con la capacidad de aprender un recorrido guiado por el usuario (modo teleoperación) y replicarlo de manera exacta y autónoma. Integra tecnologías modernas de percepción como sensores LiDAR 2D y visión computacional (cámara RGB) para garantizar la seguridad operacional frente a obstáculos dinámicos como humanos y mascotas.', isEditing: false },
+                { id: 'r2', title: '🎯 Objetivos del Proyecto', content: '• Navegación Semi-Autónoma ("Teach-and-Repeat"): Grabar recorridos definidos manualmente y reproducirlos de forma estable.\n• Mapeo y Localización (SLAM): Utilizar un sensor LiDAR 2D para generar mapas bidimensionales del entorno y realizar localización en tiempo real.\n• Detección de Obstáculos Dinámicos y Seguridad: Emplear una cámara RGB y algoritmos de Deep Learning para detectar e identificar personas y animales.\n• Arquitectura Robusta y Segura: Implementar un sistema de parada de emergencia (E-Stop) tanto por hardware como por software.', isEditing: false }
+            ],
+            'cuellos': [
+                { id: 'c1', title: '1. El Abastecimiento de Hardware (T1.2) como "Falso Amigo"', content: 'Análisis: La adquisición de sensores y la SBC tiene una holgura pequeña. Si la importación o compra local se retrasa, esta tarea se convertirá inmediatamente en el nuevo camino crítico, demorando el ensamblado de hardware y el inicio de la configuración de software.\n\nAcción Mitigadora: Realizar la compra de sensores el Día 1 del proyecto, en paralelo al diseño del chasis.', isEditing: false },
+                { id: 'c2', title: '2. El Cuello de Botella de Hardware-Software: Comunicación SBC-MCU (T2.2)', content: 'Análisis: Es el puente crítico entre el hardware físico y ROS 2. Si el protocolo tiene pérdidas de paquetes o ruido eléctrico, bloqueará el desarrollo de la Odometría/SLAM, la cual requiere teleoperar la máquina.\n\nAcción Mitigadora: Utilizar una librería robusta ya probada (ejemplo: micro-ROS sobre serial) en lugar de inventar un protocolo personalizado.', isEditing: false },
+                { id: 'c3', title: '3. La Alta Holgura de la Cámara e IA (T4.1, T4.2)', content: 'Análisis: La puesta a punto del modelo de visión tiene una holgura masiva. Sin embargo, la inferencia visual suele ser un cuello de botella de recursos computacionales (la CPU de la Raspberry Pi puede quedarse corta para procesar frames e inferencias a la vez que corre SLAM y Nav2).\n\nAcción Mitigadora: Empezar probando modelos extremadamente ligeros (YOLOv8-nano cuantizado, o MobileNet-SSD) y medir el uso de CPU/RAM antes de la integración final.', isEditing: false }
+            ]
+        };
+
+        let contentBlocks = JSON.parse(JSON.stringify(defaultContentBlocks));
+
+        function loadFromStorage() {
+            let savedTasks = localStorage.getItem('lawnMowerTasks');
+            if (savedTasks) tasksData = JSON.parse(savedTasks);
+            
+            let savedBlocks = localStorage.getItem('lawnMowerBlocks');
+            if (savedBlocks) contentBlocks = JSON.parse(savedBlocks);
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('lawnMowerTasks', JSON.stringify(tasksData));
+            localStorage.setItem('lawnMowerBlocks', JSON.stringify(contentBlocks));
+        }
+
+        function resetStorage() {
+            if(confirm('¿Estás seguro de que quieres borrar todos tus cambios y volver a los datos de fábrica?')) {
+                localStorage.removeItem('lawnMowerTasks');
+                localStorage.removeItem('lawnMowerBlocks');
+                location.reload();
+            }
+        }
 
         let computedTasks = {};
         let projectDuration = 0;
@@ -485,6 +522,16 @@
         }
 
         function updateAll() {
+            // Ordenar las tareas por número de Fase, manteniendo el orden relativo (stable sort)
+            tasksData.sort((a, b) => {
+                let matchA = a.phase.match(/Fase (\d+)/i);
+                let matchB = b.phase.match(/Fase (\d+)/i);
+                let numA = matchA ? parseInt(matchA[1]) : 999;
+                let numB = matchB ? parseInt(matchB[1]) : 999;
+                if (numA !== numB) return numA - numB;
+                return 0; 
+            });
+
             autoRenumberTasks();
             recalculateCPM();
             renderTable();
@@ -497,6 +544,8 @@
                 let currentTab = activeBtn.getAttribute('onclick').match(/'([^']+)'/)[1];
                 if (currentTab === 'grafo' || currentTab === 'gantt') triggerMermaidRender(currentTab);
             }
+            
+            saveToStorage();
         }
 
         function openTab(evt, tabName) {
@@ -665,18 +714,7 @@
             }
         });
 
-        // Dynamic Content Blocks Logic
-        let contentBlocks = {
-            'resumen': [
-                { id: 'r1', title: '🤖 Cortadora de Pasto Semi-Autónoma (LawnMowerBot)', content: 'Este proyecto consiste en el diseño, desarrollo e implementación de una máquina cortadora de pasto semi-autónoma orientada a la robótica móvil de servicio. La máquina cuenta con la capacidad de aprender un recorrido guiado por el usuario (modo teleoperación) y replicarlo de manera exacta y autónoma. Integra tecnologías modernas de percepción como sensores LiDAR 2D y visión computacional (cámara RGB) para garantizar la seguridad operacional frente a obstáculos dinámicos como humanos y mascotas.', isEditing: false },
-                { id: 'r2', title: '🎯 Objetivos del Proyecto', content: '• Navegación Semi-Autónoma ("Teach-and-Repeat"): Grabar recorridos definidos manualmente y reproducirlos de forma estable.\n• Mapeo y Localización (SLAM): Utilizar un sensor LiDAR 2D para generar mapas bidimensionales del entorno y realizar localización en tiempo real.\n• Detección de Obstáculos Dinámicos y Seguridad: Emplear una cámara RGB y algoritmos de Deep Learning para detectar e identificar personas y animales.\n• Arquitectura Robusta y Segura: Implementar un sistema de parada de emergencia (E-Stop) tanto por hardware como por software.', isEditing: false }
-            ],
-            'cuellos': [
-                { id: 'c1', title: '1. El Abastecimiento de Hardware (T1.2) como "Falso Amigo"', content: 'Análisis: La adquisición de sensores y la SBC tiene una holgura pequeña. Si la importación o compra local se retrasa, esta tarea se convertirá inmediatamente en el nuevo camino crítico, demorando el ensamblado de hardware y el inicio de la configuración de software.\n\nAcción Mitigadora: Realizar la compra de sensores el Día 1 del proyecto, en paralelo al diseño del chasis.', isEditing: false },
-                { id: 'c2', title: '2. El Cuello de Botella de Hardware-Software: Comunicación SBC-MCU (T2.2)', content: 'Análisis: Es el puente crítico entre el hardware físico y ROS 2. Si el protocolo tiene pérdidas de paquetes o ruido eléctrico, bloqueará el desarrollo de la Odometría/SLAM, la cual requiere teleoperar la máquina.\n\nAcción Mitigadora: Utilizar una librería robusta ya probada (ejemplo: micro-ROS sobre serial) en lugar de inventar un protocolo personalizado.', isEditing: false },
-                { id: 'c3', title: '3. La Alta Holgura de la Cámara e IA (T4.1, T4.2)', content: 'Análisis: La puesta a punto del modelo de visión tiene una holgura masiva. Sin embargo, la inferencia visual suele ser un cuello de botella de recursos computacionales (la CPU de la Raspberry Pi puede quedarse corta para procesar frames e inferencias a la vez que corre SLAM y Nav2).\n\nAcción Mitigadora: Empezar probando modelos extremadamente ligeros (YOLOv8-nano cuantizado, o MobileNet-SSD) y medir el uso de CPU/RAM antes de la integración final.', isEditing: false }
-            ]
-        };
+
 
         function renderBlocks(category, containerId) {
             const container = document.getElementById(containerId);
@@ -716,7 +754,7 @@
 
         function addBlock(category) {
             let newId = 'b_' + Date.now();
-            contentBlocks[category].push({ id: newId, title: '', content: '', isEditing: true });
+            contentBlocks[category].unshift({ id: newId, title: '', content: '', isEditing: true });
             updateAll();
         }
         function editBlock(category, id) {
@@ -744,7 +782,10 @@
             updateAll();
         }
 
-        window.addEventListener('DOMContentLoaded', () => { updateAll(); });
+        window.addEventListener('DOMContentLoaded', () => { 
+            loadFromStorage();
+            updateAll(); 
+        });
     </script>
 </body>
 </html>
